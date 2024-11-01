@@ -1,8 +1,11 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
-from PyQt6.QtGui import QRegularExpressionValidator
-from PyQt6.QtCore import QRegularExpression
+from PyQt6.QtGui import QRegularExpressionValidator, QAction
+from PyQt6.QtCore import QRegularExpression, Qt
+from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 
 import requests, json, os
+
+current_status = True
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -186,7 +189,7 @@ class Ui_MainWindow(object):
 class Ui_RunWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.setFixedSize(561, 291)
+        MainWindow.setFixedSize(561, 290)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.textBrowser = QtWidgets.QTextBrowser(self.centralwidget)
@@ -237,14 +240,33 @@ class Ui_RunWindow(object):
         self.pushButton_5.setObjectName("pushButton_5")
         self.pushButton_5.clicked.connect(self.edit_settings)
         self.verticalLayout_5.addWidget(self.pushButton_5)
+        self.pushButton_6 = QtWidgets.QPushButton(self.verticalLayoutWidget_4)
+        self.pushButton_6.setEnabled(True)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pushButton_6.sizePolicy().hasHeightForWidth())
+        self.pushButton_6.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI")
+        font.setPointSize(12)
+        self.pushButton_6.setFont(font)
+        self.pushButton_6.setStyleSheet("")
+        self.pushButton_6.setFlat(False)
+        self.pushButton_6.setObjectName("pushButton_6")
+        self.verticalLayout_5.addWidget(self.pushButton_6)
+        self.pushButton_6.clicked.connect(self.close_event)
         MainWindow.setCentralWidget(self.centralwidget)
-        self.windowIcon = QtGui.QIcon('icon.png')
+        self.windowIcon = QtGui.QIcon('icon.ico')
         MainWindow.setWindowIcon(self.windowIcon)
+        
+        MainWindow.setWindowFlags(Qt.WindowType.FramelessWindowHint)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
+        global current_status
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "tg-ctrl"))
         self.textBrowser.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
@@ -253,14 +275,21 @@ class Ui_RunWindow(object):
 "</style></head><body style=\" font-family:\'Segoe UI\'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:36pt; font-weight:600; color:#5555ff;\">tg-ctrl</span></p></body></html>"))
-        self.pushButton_4.setText(_translate("MainWindow", "Start"))
+        if current_status:
+            self.pushButton_4.setText(_translate("MainWindow", "Stop"))
+        else:
+            self.pushButton_4.setText(_translate("MainWindow", "Stop"))
         self.pushButton_5.setText(_translate("MainWindow", "Edit Settings"))
+        self.pushButton_6.setText(_translate("MainWindow", "Minimize to tray"))
         
     def edit_settings(self):
         MainWindow.hide()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(MainWindow)
-        MainWindow.show()             
+        MainWindow.show()     
+        
+    def close_event(self):
+        MainWindow.hide()     
 
 if __name__ == "__main__":
     import sys
@@ -268,6 +297,30 @@ if __name__ == "__main__":
     app.setWindowIcon(QtGui.QIcon('icon.ico'))
     MainWindow = QtWidgets.QMainWindow()
     MainWindow.setWindowIcon(QtGui.QIcon('icon.ico'))
+    
+    tray = QSystemTrayIcon(app)
+    tray.setIcon(QtGui.QIcon('icon.ico'))
+    tray.setVisible(True)
+        
+    menu = QMenu()
+    
+    open_app = QAction("Open")
+    open_app.triggered.connect(MainWindow.show)
+    menu.addAction(open_app)
+    
+    if current_status:
+        change_status = QAction("Stop")
+    else:
+        change_status = QAction("Start")
+    menu.addAction(change_status)
+    
+    menu.addSeparator()
+        
+    quit = QAction("Quit")
+    quit.triggered.connect(app.quit)
+    menu.addAction(quit)
+
+    tray.setContextMenu(menu)
     
     if os.path.exists("config.json"):
         ui = Ui_RunWindow()
