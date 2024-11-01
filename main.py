@@ -1,6 +1,6 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtCore import QRegExp
+from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6.QtGui import QRegularExpressionValidator
+from PyQt6.QtCore import QRegularExpression
 
 import requests, json, os
 
@@ -23,8 +23,8 @@ class Ui_MainWindow(object):
         font.setBold(False)
         font.setWeight(50)
         self.textBrowser.setFont(font)
-        self.textBrowser.setFrameShape(QtWidgets.QFrame.NoFrame)
-        self.textBrowser.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.textBrowser.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.textBrowser.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
         self.textBrowser.setLineWidth(0)
         self.textBrowser.setObjectName("textBrowser")
         self.verticalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
@@ -40,7 +40,7 @@ class Ui_MainWindow(object):
         font.setFamily("Segoe UI")
         font.setPointSize(12)
         self.label.setFont(font)
-        self.label.setTextFormat(QtCore.Qt.AutoText)
+        self.label.setTextFormat(QtCore.Qt.TextFormat.AutoText)
         self.label.setWordWrap(False)
         self.label.setObjectName("label")
         self.verticalLayout_3.addWidget(self.label)
@@ -55,7 +55,7 @@ class Ui_MainWindow(object):
         self.lineEdit.setPlaceholderText("1234567789:ABCDEFGHIJKLMNOPQRSTUVWXYZ012345678")
         self.verticalLayout_3.addWidget(self.lineEdit)
         self.pushButton = QtWidgets.QPushButton(self.verticalLayoutWidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
@@ -86,7 +86,7 @@ class Ui_MainWindow(object):
         self.lineEdit_3.setObjectName("lineEdit_3")
         self.lineEdit_3.setPlaceholderText("1122334455")
         self.verticalLayout_4.addWidget(self.lineEdit_3)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         font = QtGui.QFont()
@@ -102,7 +102,7 @@ class Ui_MainWindow(object):
         self.pushButton_4 = QtWidgets.QPushButton(self.verticalLayoutWidget_4)
         self.pushButton_4.setEnabled(True)
         self.pushButton_4.clicked.connect(self.save_data)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushButton_4.sizePolicy().hasHeightForWidth())
@@ -116,10 +116,11 @@ class Ui_MainWindow(object):
         self.pushButton_4.setObjectName("pushButton_4")
         self.verticalLayout_5.addWidget(self.pushButton_4)
         MainWindow.setCentralWidget(self.centralwidget)
-        self.windowIcon = QtGui.QIcon('icon.png')
+        self.windowIcon = QtGui.QIcon('icon.ico')
         MainWindow.setWindowIcon(self.windowIcon)
         
-        validator = QRegExpValidator(QRegExp(r"\d*"))
+        regex = QRegularExpression("[0-9]+")
+        validator = QRegularExpressionValidator(regex)
         self.lineEdit_3.setValidator(validator)
 
         self.retranslateUi(MainWindow)
@@ -155,28 +156,6 @@ class Ui_MainWindow(object):
                 self.pushButton.setText("Invalid token.")
         except requests.exceptions.RequestException:
             self.pushButton.setText(f"Error connecting to Telegram API")
-            
-    def check_username(self):
-        token = self.lineEdit.text()
-        telegram_id = self.lineEdit_3.text()
-        
-        if token == "":
-            self.pushButton_3.setText("Empty token!")
-            return
-        elif telegram_id == "":
-            self.pushButton_3.setText("Empty Telegram ID!")
-            return
-            
-        try:
-            response = requests.get(f"https://api.telegram.org/bot{token}/getChat?chat_id={telegram_id}")
-            data = response.json()
-            if response.status_code == 200 and "username" in data["result"]:
-                username = data["result"]["username"]
-                self.pushButton_3.setText(f"@{username}")
-            else:
-                self.pushButton_3.setText("Not found! Write to your bot!")
-        except requests.exceptions.RequestException:
-            self.pushButton_3.setText(f"Error connecting to Telegram API")
             
     def save_data(self):
         token = self.lineEdit.text()
@@ -217,8 +196,8 @@ class Ui_RunWindow(object):
         font.setBold(False)
         font.setWeight(50)
         self.textBrowser.setFont(font)
-        self.textBrowser.setFrameShape(QtWidgets.QFrame.NoFrame)
-        self.textBrowser.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.textBrowser.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.textBrowser.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
         self.textBrowser.setLineWidth(0)
         self.textBrowser.setObjectName("textBrowser")
         self.verticalLayoutWidget_4 = QtWidgets.QWidget(self.centralwidget)
@@ -229,7 +208,7 @@ class Ui_RunWindow(object):
         self.verticalLayout_5.setObjectName("verticalLayout_5")
         self.pushButton_4 = QtWidgets.QPushButton(self.verticalLayoutWidget_4)
         self.pushButton_4.setEnabled(True)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushButton_4.sizePolicy().hasHeightForWidth())
@@ -244,7 +223,7 @@ class Ui_RunWindow(object):
         self.verticalLayout_5.addWidget(self.pushButton_4)
         self.pushButton_5 = QtWidgets.QPushButton(self.verticalLayoutWidget_4)
         self.pushButton_5.setEnabled(True)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushButton_5.sizePolicy().hasHeightForWidth())
@@ -286,6 +265,7 @@ class Ui_RunWindow(object):
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon('icon.ico'))
     MainWindow = QtWidgets.QMainWindow()
     
     if os.path.exists("config.json"):
@@ -297,4 +277,4 @@ if __name__ == "__main__":
         ui.setupUi(MainWindow)
         MainWindow.show()    
         
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
