@@ -267,6 +267,7 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon('icon.ico'))
     MainWindow = QtWidgets.QMainWindow()
+    MainWindow.setWindowIcon(QtGui.QIcon('icon.ico'))
     
     if os.path.exists("config.json"):
         ui = Ui_RunWindow()
