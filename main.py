@@ -223,6 +223,7 @@ class Ui_RunWindow(object):
         self.pushButton_4.setStyleSheet("")
         self.pushButton_4.setFlat(False)
         self.pushButton_4.setObjectName("pushButton_4")
+        self.pushButton_4.clicked.connect(self.change_status)
         self.verticalLayout_5.addWidget(self.pushButton_4)
         self.pushButton_5 = QtWidgets.QPushButton(self.verticalLayoutWidget_4)
         self.pushButton_5.setEnabled(True)
@@ -261,6 +262,36 @@ class Ui_RunWindow(object):
         MainWindow.setWindowIcon(self.windowIcon)
         
         MainWindow.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        
+        self.start_bot()
+        
+        tray = QSystemTrayIcon(app)
+        tray.setIcon(QtGui.QIcon('icon.ico'))
+        tray.setVisible(True)
+            
+        menu = QMenu()
+        
+        self.open_app = QAction("Open")
+        self.open_app.triggered.connect(MainWindow.show)
+        menu.addAction(self.open_app)
+        
+        if current_status:
+            self.change_status = QAction("Stop")
+        else:
+            self.change_status = QAction("Start")     
+            
+        self.change_status.triggered.connect(self.change_tray_status)
+        menu.addAction(self.change_status)
+        
+        menu.addSeparator()
+            
+        self.quit = QAction("Quit")
+        self.quit.triggered.connect(app.quit)
+        menu.addAction(self.quit)
+
+        tray.setContextMenu(menu)
+        
+        self.update_button_text()
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -278,7 +309,7 @@ class Ui_RunWindow(object):
         if current_status:
             self.pushButton_4.setText(_translate("MainWindow", "Stop"))
         else:
-            self.pushButton_4.setText(_translate("MainWindow", "Stop"))
+            self.pushButton_4.setText(_translate("MainWindow", "Start"))
         self.pushButton_5.setText(_translate("MainWindow", "Edit Settings"))
         self.pushButton_6.setText(_translate("MainWindow", "Minimize to tray"))
         
@@ -289,38 +320,77 @@ class Ui_RunWindow(object):
         MainWindow.show()     
         
     def close_event(self):
-        MainWindow.hide()     
-
+        MainWindow.hide()          
+        
+    def change_status(self):
+        global current_status
+        current_status = not current_status
+        if current_status:
+            self.pushButton_4.setText("Stop")
+            self.start_bot()
+        else:
+            self.pushButton_4.setText("Start")
+            self.stop_bot()
+            
+        self.update_tray_status()
+            
+    def update_button_text(self):
+        global current_status
+        self.pushButton_4.setText("Stop" if current_status else "Start")   
+        
+    def update_tray_status(self):
+        if current_status:
+            self.change_status.setText("Stop")
+            self.start_bot()
+        else:
+            self.change_status.setText("Start")  
+            self.stop_bot() 
+            
+    def change_tray_status(self):
+        global current_status
+        current_status = not current_status
+        self.update_tray_status()
+        MainWindow.hide() 
+        self.update_button_text()       
+            
+    def start_bot(self):
+        if current_status:
+            with open("config.json", "r") as config_file:
+                config_data = json.load(config_file)
+                token = config_data["bot_token"]
+                telegram_id = config_data["telegram_id"]
+            
+            payload = {
+                    "chat_id": telegram_id,
+                    "text": "Client online ✅"
+                }
+            try:
+                requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
+            except requests.exceptions.RequestException:
+                pass 
+            
+    def stop_bot(self):
+        if not current_status:
+            with open("config.json", "r") as config_file:
+                config_data = json.load(config_file)
+                token = config_data["bot_token"]
+                telegram_id = config_data["telegram_id"]
+            
+            payload = {
+                    "chat_id": telegram_id,
+                    "text": "Client offline ❌"
+                }
+            try:
+                requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
+            except requests.exceptions.RequestException:
+                pass           
+            
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     app.setWindowIcon(QtGui.QIcon('icon.ico'))
     MainWindow = QtWidgets.QMainWindow()
     MainWindow.setWindowIcon(QtGui.QIcon('icon.ico'))
-    
-    tray = QSystemTrayIcon(app)
-    tray.setIcon(QtGui.QIcon('icon.ico'))
-    tray.setVisible(True)
-        
-    menu = QMenu()
-    
-    open_app = QAction("Open")
-    open_app.triggered.connect(MainWindow.show)
-    menu.addAction(open_app)
-    
-    if current_status:
-        change_status = QAction("Stop")
-    else:
-        change_status = QAction("Start")
-    menu.addAction(change_status)
-    
-    menu.addSeparator()
-        
-    quit = QAction("Quit")
-    quit.triggered.connect(app.quit)
-    menu.addAction(quit)
-
-    tray.setContextMenu(menu)
     
     if os.path.exists("config.json"):
         ui = Ui_RunWindow()
