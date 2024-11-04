@@ -3,9 +3,20 @@ from PyQt6.QtGui import QRegularExpressionValidator, QAction
 from PyQt6.QtCore import QRegularExpression, Qt
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 
-import requests, json, os
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters.command import Command
+
+import requests, json, os, asyncio, threading, time
 
 current_status = True
+
+with open("config.json", "r") as config_file:
+    config_data = json.load(config_file)
+    token = config_data["bot_token"]
+    telegram_id = config_data["telegram_id"]
+    
+bot = Bot(token=token)
+dp = Dispatcher()    
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -286,7 +297,7 @@ class Ui_RunWindow(object):
         menu.addSeparator()
             
         self.quit = QAction("Quit")
-        self.quit.triggered.connect(app.quit)
+        self.quit.triggered.connect(self.stop)
         menu.addAction(self.quit)
 
         tray.setContextMenu(menu)
@@ -355,11 +366,6 @@ class Ui_RunWindow(object):
             
     def start_bot(self):
         if current_status:
-            with open("config.json", "r") as config_file:
-                config_data = json.load(config_file)
-                token = config_data["bot_token"]
-                telegram_id = config_data["telegram_id"]
-            
             payload = {
                     "chat_id": telegram_id,
                     "text": "Client online ✅"
@@ -371,19 +377,38 @@ class Ui_RunWindow(object):
             
     def stop_bot(self):
         if not current_status:
-            with open("config.json", "r") as config_file:
-                config_data = json.load(config_file)
-                token = config_data["bot_token"]
-                telegram_id = config_data["telegram_id"]
-            
             payload = {
                     "chat_id": telegram_id,
                     "text": "Client offline ❌"
-                }
+            }
             try:
                 requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
             except requests.exceptions.RequestException:
-                pass           
+                pass  
+            
+    def stop(self):
+        payload = {
+                    "chat_id": telegram_id,
+                    "text": "Client offline ❌"
+        }
+        try:
+            requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
+        except requests.exceptions.RequestException:
+            pass  
+        
+        os._exit(0)               
+            
+@dp.message(Command("start"))
+async def start(message: types.Message):
+    global current_status
+    if current_status and message.from_user.id == telegram_id:
+        await message.answer(str(current_status))
+    
+async def main():
+        await dp.start_polling(bot)
+        
+def start():
+        asyncio.run(main())
             
 if __name__ == "__main__":
     import sys
@@ -399,6 +424,9 @@ if __name__ == "__main__":
     else:
         ui = Ui_MainWindow()
         ui.setupUi(MainWindow)
-        MainWindow.show()    
+        MainWindow.show()     
+        
+    bot_thread = threading.Thread(target=start)
+    bot_thread.start()       
         
     sys.exit(app.exec())
