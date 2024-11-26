@@ -3,20 +3,10 @@ from PyQt6.QtGui import QRegularExpressionValidator, QAction
 from PyQt6.QtCore import QRegularExpression, Qt
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters.command import Command
+import requests, json, os, asyncio, threading, time, subprocess, psutil
 
-import requests, json, os, asyncio, threading, time
-
-current_status = True
-
-with open("config.json", "r") as config_file:
-    config_data = json.load(config_file)
-    token = config_data["bot_token"]
-    telegram_id = config_data["telegram_id"]
-    
-bot = Bot(token=token)
-dp = Dispatcher()    
+current_status = True  
+process = None
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -197,7 +187,7 @@ class Ui_MainWindow(object):
         except IOError:
             self.textBrowser.setText("Error")
             
-class Ui_RunWindow(object):
+class Ui_RunWindow(object):  
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.setFixedSize(561, 290)
@@ -272,7 +262,7 @@ class Ui_RunWindow(object):
         self.windowIcon = QtGui.QIcon('icon.ico')
         MainWindow.setWindowIcon(self.windowIcon)
         
-        MainWindow.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        MainWindow.setWindowFlag(QtCore.Qt.WindowType.WindowCloseButtonHint, False)
         
         self.start_bot()
         
@@ -362,9 +352,23 @@ class Ui_RunWindow(object):
         current_status = not current_status
         self.update_tray_status()
         MainWindow.hide() 
-        self.update_button_text()       
+        self.update_button_text()    
+        
+    def bot(self):
+        try:
+            self.process = subprocess.Popen(
+                ["bot.exe"],
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )    
+        except Exception:
+            os.system(".\\build.bat")   
             
     def start_bot(self):
+        with open("config.json", "r") as config_file:
+                config_data = json.load(config_file)
+                telegram_id = config_data["telegram_id"]
+                token = config_data["bot_token"]
+        
         if current_status:
             payload = {
                     "chat_id": telegram_id,
@@ -373,9 +377,16 @@ class Ui_RunWindow(object):
             try:
                 requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
             except requests.exceptions.RequestException:
-                pass 
+                pass   
+            
+        self.bot()
             
     def stop_bot(self):
+        with open("config.json", "r") as config_file:
+                config_data = json.load(config_file)
+                telegram_id = config_data["telegram_id"]
+                token = config_data["bot_token"]
+        
         if not current_status:
             payload = {
                     "chat_id": telegram_id,
@@ -386,29 +397,36 @@ class Ui_RunWindow(object):
             except requests.exceptions.RequestException:
                 pass  
             
-    def stop(self):
+        try:
+            for proc in psutil.process_iter():
+                if proc.name() == 'bot.exe':
+                    proc.kill() 
+        except Exception:
+            pass 
+            
+    def stop(self): 
+        with open("config.json", "r") as config_file:
+                config_data = json.load(config_file)
+                telegram_id = config_data["telegram_id"]
+                token = config_data["bot_token"]
+        
         payload = {
                     "chat_id": telegram_id,
-                    "text": "Client offline ❌"
+                    "text": "tg-ctrl closed ❌"
         }
         try:
             requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
         except requests.exceptions.RequestException:
             pass  
         
-        os._exit(0)               
-            
-@dp.message(Command("start"))
-async def start(message: types.Message):
-    global current_status
-    if current_status and message.from_user.id == telegram_id:
-        await message.answer(str(current_status))
-    
-async def main():
-        await dp.start_polling(bot)
+        try:
+            for proc in psutil.process_iter():
+                if proc.name() == 'bot.exe':
+                    proc.kill() 
+        except Exception:
+            pass
         
-def start():
-        asyncio.run(main())
+        os._exit(0)                  
             
 if __name__ == "__main__":
     import sys
@@ -420,13 +438,13 @@ if __name__ == "__main__":
     if os.path.exists("config.json"):
         ui = Ui_RunWindow()
         ui.setupUi(MainWindow)
-        MainWindow.show()
+        if len(sys.argv) > 1 and sys.argv[1] == "--silent":
+            pass
+        else:
+            MainWindow.show()
     else:
         ui = Ui_MainWindow()
         ui.setupUi(MainWindow)
-        MainWindow.show()     
-        
-    bot_thread = threading.Thread(target=start)
-    bot_thread.start()       
+        MainWindow.show()        
         
     sys.exit(app.exec())

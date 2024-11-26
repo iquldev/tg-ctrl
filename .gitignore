@@ -166,3 +166,6 @@ cython_debug/
 #.idea/
 config.json
 /config.json
+/pyvenv.cfg
+/Scripts
+build.bat
