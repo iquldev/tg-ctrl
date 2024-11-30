@@ -169,3 +169,4 @@ config.json
 /pyvenv.cfg
 /Scripts
 build.bat
+/monitor-1.png
