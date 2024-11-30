@@ -1,7 +1,7 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtGui import QRegularExpressionValidator, QAction
 from PyQt6.QtCore import QRegularExpression, Qt
-from PyQt6.QtWidgets import QSystemTrayIcon, QMenuz
+from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 
 import requests, json, os, asyncio, threading, time, subprocess, psutil
 
