@@ -1,12 +1,18 @@
+import importlib
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtGui import QRegularExpressionValidator, QAction
-from PyQt6.QtCore import QRegularExpression, Qt
+from PyQt6.QtCore import QRegularExpression
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 
-import requests, json, os, asyncio, threading, time, subprocess, psutil
+import requests, json, os, asyncio, threading, psutil
+
+import bot as bot_module
 
 current_status = True  
 process = None
+
+bot_thread = None
+bot_loop = None
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -356,13 +362,20 @@ class Ui_RunWindow(object):
         self.update_button_text()    
         
     def bot(self):
-        try:
-            self.process = subprocess.Popen(
-                ["bot.exe"],
-                creationflags=subprocess.CREATE_NO_WINDOW
-            )    
-        except Exception:
-            os.system(".\\build.bat")   
+        global bot_thread, bot_loop, bot_module
+        bot_module = importlib.reload(bot_module)
+        def run():
+            global bot_loop
+            bot_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(bot_loop)
+            try:
+                bot_loop.run_until_complete(bot_module.run_bot())
+            except Exception as e:
+                pass
+            finally:
+                bot_loop.close()
+        bot_thread = threading.Thread(target=run, daemon=True)
+        bot_thread.start()
             
     def start_bot(self):
         with open("config.json", "r") as config_file:
@@ -383,6 +396,7 @@ class Ui_RunWindow(object):
         self.bot()
             
     def stop_bot(self):
+        global bot_loop, bot_thread, bot_module
         with open("config.json", "r") as config_file:
                 config_data = json.load(config_file)
                 telegram_id = config_data["telegram_id"]
@@ -397,13 +411,14 @@ class Ui_RunWindow(object):
                 requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
             except requests.exceptions.RequestException:
                 pass  
-            
-        try:
-            for proc in psutil.process_iter():
-                if proc.name() == 'bot.exe':
-                    proc.kill() 
-        except Exception:
-            pass 
+
+        if bot_loop and bot_loop.is_running():
+            try:
+                bot_module.stop_bot(bot_loop)
+            except Exception as e:
+                pass
+        if bot_thread:
+            bot_thread.join(timeout=5)
             
     def stop(self): 
         with open("config.json", "r") as config_file:
