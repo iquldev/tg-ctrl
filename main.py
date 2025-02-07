@@ -268,6 +268,7 @@ class Ui_RunWindow(object):
         
         tray = QSystemTrayIcon(app)
         tray.setIcon(QtGui.QIcon('icon.ico'))
+        tray.setToolTip("tg-ctrl")
         tray.setVisible(True)
             
         menu = QMenu()
