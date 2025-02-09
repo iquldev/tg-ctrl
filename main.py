@@ -4,11 +4,10 @@ from PyQt6.QtGui import QRegularExpressionValidator, QAction
 from PyQt6.QtCore import QRegularExpression
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 
-import requests, json, os, asyncio, threading, psutil
+import requests, json, os, asyncio, threading
 
 import bot as bot_module
 
-current_status = True  
 process = None
 
 bot_thread = None
@@ -230,7 +229,7 @@ class Ui_RunWindow(object):
         self.pushButton_4.setStyleSheet("")
         self.pushButton_4.setFlat(False)
         self.pushButton_4.setObjectName("pushButton_4")
-        self.pushButton_4.clicked.connect(self.change_status)
+        self.pushButton_4.clicked.connect(self.stop)
         self.verticalLayout_5.addWidget(self.pushButton_4)
         self.pushButton_5 = QtWidgets.QPushButton(self.verticalLayoutWidget_4)
         self.pushButton_5.setEnabled(True)
@@ -281,15 +280,7 @@ class Ui_RunWindow(object):
         
         self.open_app = QAction("Open")
         self.open_app.triggered.connect(MainWindow.show)
-        menu.addAction(self.open_app)
-        
-        if current_status:
-            self.change_status = QAction("Stop")
-        else:
-            self.change_status = QAction("Start")     
-            
-        self.change_status.triggered.connect(self.change_tray_status)
-        menu.addAction(self.change_status)
+        menu.addAction(self.open_app)    
         
         menu.addSeparator()
             
@@ -298,8 +289,6 @@ class Ui_RunWindow(object):
         menu.addAction(self.quit)
 
         tray.setContextMenu(menu)
-        
-        self.update_button_text()
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -314,10 +303,7 @@ class Ui_RunWindow(object):
 "</style></head><body style=\" font-family:\'Segoe UI\'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:36pt; font-weight:600; color:#5555ff;\">tg-ctrl</span></p></body></html>"))
-        if current_status:
-            self.pushButton_4.setText(_translate("MainWindow", "Stop"))
-        else:
-            self.pushButton_4.setText(_translate("MainWindow", "Start"))
+        self.pushButton_4.setText(_translate("MainWindow", "Close"))
         self.pushButton_5.setText(_translate("MainWindow", "Edit Settings"))
         self.pushButton_6.setText(_translate("MainWindow", "Minimize to tray"))
         
@@ -328,38 +314,7 @@ class Ui_RunWindow(object):
         MainWindow.show()     
         
     def close_event(self):
-        MainWindow.hide()          
-        
-    def change_status(self):
-        global current_status
-        current_status = not current_status
-        if current_status:
-            self.pushButton_4.setText("Stop")
-            self.start_bot()
-        else:
-            self.pushButton_4.setText("Start")
-            self.stop_bot()
-            
-        self.update_tray_status()
-            
-    def update_button_text(self):
-        global current_status
-        self.pushButton_4.setText("Stop" if current_status else "Start")   
-        
-    def update_tray_status(self):
-        if current_status:
-            self.change_status.setText("Stop")
-            self.start_bot()
-        else:
-            self.change_status.setText("Start")  
-            self.stop_bot() 
-            
-    def change_tray_status(self):
-        global current_status
-        current_status = not current_status
-        self.update_tray_status()
-        MainWindow.hide() 
-        self.update_button_text()    
+        MainWindow.hide()             
         
     def bot(self):
         global bot_thread, bot_loop, bot_module
@@ -383,43 +338,19 @@ class Ui_RunWindow(object):
                 telegram_id = config_data["telegram_id"]
                 token = config_data["bot_token"]
         
-        if current_status:
-            payload = {
-                    "chat_id": telegram_id,
-                    "text": "Client online ✅"
-                }
-            try:
-                requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
-            except requests.exceptions.RequestException:
-                pass   
-            
-        self.bot()
-            
-    def stop_bot(self):
-        global bot_loop, bot_thread, bot_module
-        with open("config.json", "r") as config_file:
-                config_data = json.load(config_file)
-                telegram_id = config_data["telegram_id"]
-                token = config_data["bot_token"]
-        
-        if not current_status:
-            payload = {
-                    "chat_id": telegram_id,
-                    "text": "Client offline ❌"
-            }
-            try:
-                requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
-            except requests.exceptions.RequestException:
-                pass  
 
-        if bot_loop and bot_loop.is_running():
-            try:
-                bot_module.stop_bot(bot_loop)
-            except Exception as e:
-                pass
-        if bot_thread:
-            bot_thread.join(timeout=5)
+        payload = {
+                "chat_id": telegram_id,
+                "text": "Client online ✅"
+        }
+        
+        try:
+            requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
+        except requests.exceptions.RequestException:
+            pass   
             
+        self.bot()   
+        
     def stop(self): 
         with open("config.json", "r") as config_file:
                 config_data = json.load(config_file)
@@ -435,14 +366,7 @@ class Ui_RunWindow(object):
         except requests.exceptions.RequestException:
             pass  
         
-        try:
-            for proc in psutil.process_iter():
-                if proc.name() == 'bot.exe':
-                    proc.kill() 
-        except Exception:
-            pass
-        
-        os._exit(0)                  
+        app.quit()
             
 if __name__ == "__main__":
     import sys

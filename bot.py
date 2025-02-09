@@ -205,12 +205,5 @@ async def run_bot():
     register_handlers(dp, bot, telegram_id)
     await dp.start_polling(bot)
 
-def stop_bot(loop):
-    import concurrent.futures
-    if loop and loop.is_running():
-        fut = asyncio.run_coroutine_threadsafe(dp.stop_polling(), loop)
-        try: fut.result(timeout=5)
-        except concurrent.futures.TimeoutError: pass
-
 if __name__ == '__main__':
     asyncio.run(run_bot())
