@@ -7,6 +7,8 @@ from mss import mss
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 from screen_brightness_control import get_brightness
+import webbrowser
+import ctypes
 
 def getbattery():
     try: return str(psutil.sensors_battery().percent)
@@ -58,6 +60,54 @@ def getbluetooth():
         return bool(res.stdout.strip())
     except: return False
 
+def run(data: str):
+    if data.startswith("http://") or data.startswith("https://") or data.startswith("www."):
+        url = data if data.startswith("http") else "http://" + data
+        webbrowser.open(url)
+        return f"Link {url} opened"
+
+    if os.path.isdir(data):
+        os.startfile(data)
+        return f"Folder {data} opened"
+
+    if os.path.isfile(data):
+        os.startfile(data)
+        return f"File {data} opened"
+
+    try:
+        subprocess.Popen(data)
+        return f"Launching {data}"
+    except Exception as e:
+        return "Failed to launch the application"
+
+def get_file(file_path):
+    if not os.path.isfile(file_path):
+        return None, "File not found"
+    try:
+        return types.FSInputFile(file_path), None
+    except Exception:
+        return None, "Failed to send file"
+    
+def create_window(text):
+    ctypes.windll.user32.MessageBoxW(0, text, "Message", 0)
+
+def shutdown_pc(delay_seconds=0):
+    try:
+        if delay_seconds == 0:
+            os.system("shutdown /s /f /t 0")
+        else:
+            os.system(f"shutdown /s /f /t {delay_seconds}")
+        return True
+    except:
+        return False
+
+def cancel_shutdown():
+    try:
+        os.system("shutdown /a")
+        return True
+    except:
+        return False
+
 inlineboards = {
     'volumemenu': [
         [InlineKeyboardButton(text="➕ 10%", callback_data="vadd10")],
@@ -66,17 +116,29 @@ inlineboards = {
         [InlineKeyboardButton(text="❌ Close", callback_data="close")]
     ],
     'controlmenu': [
-        [InlineKeyboardButton(text="Shutdown", callback_data="shutdown")],
+        [InlineKeyboardButton(text="Shutdown ⏻", callback_data="shutdown")],
         [InlineKeyboardButton(text="Restart", callback_data="restart")],
         [InlineKeyboardButton(text="Sleep Mode", callback_data="sleep")],
         [InlineKeyboardButton(text="Hibernation", callback_data="hibernation")],
         [InlineKeyboardButton(text="Log out", callback_data="logout")],
         [InlineKeyboardButton(text="❌ Close", callback_data="close")]
     ],
+    'shutdownmenu': [
+        [InlineKeyboardButton(text="Now", callback_data="shutdown_now")],
+        [InlineKeyboardButton(text="1m", callback_data="shutdown_1m")],
+        [InlineKeyboardButton(text="15m", callback_data="shutdown_15m")],
+        [InlineKeyboardButton(text="30m", callback_data="shutdown_30m")],
+        [InlineKeyboardButton(text="1h", callback_data="shutdown_1h")],
+        [InlineKeyboardButton(text="6h", callback_data="shutdown_6h")],
+        [InlineKeyboardButton(text="12h", callback_data="shutdown_12h")],
+        [InlineKeyboardButton(text="🚫 Cancel", callback_data="shutdown_cancel")],
+        [InlineKeyboardButton(text="❌ Close", callback_data="close")]
+    ],
     'mainmenu': [
         [InlineKeyboardButton(text="Volume 🔊", callback_data="volume")],
         [InlineKeyboardButton(text="Control 🔴", callback_data="control")],
-        [InlineKeyboardButton(text="Functions ⚙️", callback_data="functions")]
+        [InlineKeyboardButton(text="Functions ⚙️", callback_data="functions")],
+        [InlineKeyboardButton(text="Commands ❔", callback_data="commands")]
     ],
     'funcmenu': [
         [InlineKeyboardButton(text="❌ Close", callback_data="close")]
@@ -91,7 +153,7 @@ def register_handlers(dp, bot, telegram_id):
                f'⚡ CPU: {getcpu()}Mhz \n'
                f'🗂️ RAM: {getram()["percent"]}% ({round(getram()["used"],1)} Gb/{round(getram()["full"])} Gb) \n'
                f'💿 Disk: {getdrive()["percent"]}% ({round(getdrive()["used"],1)} Gb/{round(getdrive()["full"])} Gb) \n\n'
-               f'📱 Runned: {getapps()} \n'
+               f'📱 Runned: {getapps()} \n\n'
                f'🔊 Volume: {int(round(getvolume(),0))}%\n'
                f'☀️ Brightness: {brightness()}%')
         await bot.edit_message_caption(caption=msg, chat_id=call.message.chat.id,
@@ -134,8 +196,63 @@ def register_handlers(dp, bot, telegram_id):
 
     @dp.callback_query(F.data == 'shutdown')
     async def shutdown_handler(call: CallbackQuery):
-        os.system("shutdown /s /f /t 0")
-        await call.message.answer('Done 👌')
+        kb = InlineKeyboardMarkup(inline_keyboard=inlineboards['shutdownmenu'])
+        await bot.edit_message_caption(
+            caption='⏻ Choose shutdown time:',
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=kb
+        )
+
+    @dp.callback_query(F.data == 'shutdown_now')
+    async def shutdown_now_handler(call: CallbackQuery):
+        shutdown_pc(0)
+        await call.message.answer('💻 PC will shutdown now!')
+
+    @dp.callback_query(F.data == 'shutdown_1m')
+    async def shutdown_1m_handler(call: CallbackQuery):
+        shutdown_pc(60)
+        await call.message.answer('⏱️ PC will shutdown in 1 minute!')
+        await close(call)
+
+    @dp.callback_query(F.data == 'shutdown_15m')
+    async def shutdown_15m_handler(call: CallbackQuery):
+        shutdown_pc(900)
+        await call.message.answer('⏱️ PC will shutdown in 15 minutes!')
+        await close(call)
+
+    @dp.callback_query(F.data == 'shutdown_30m')
+    async def shutdown_30m_handler(call: CallbackQuery):
+        shutdown_pc(1800)
+        await call.message.answer('⏱️ PC will shutdown in 30 minutes!')
+        await close(call)
+
+    @dp.callback_query(F.data == 'shutdown_1h')
+    async def shutdown_1h_handler(call: CallbackQuery):
+        shutdown_pc(3600)
+        await call.message.answer('⏱️ PC will shutdown in 1 hour!')
+        await close(call)
+
+    @dp.callback_query(F.data == 'shutdown_6h')
+    async def shutdown_6h_handler(call: CallbackQuery):
+        shutdown_pc(21600)
+        await call.message.answer('⏱️ PC will shutdown in 6 hours!')
+        await close(call)
+
+    @dp.callback_query(F.data == 'shutdown_12h')
+    async def shutdown_12h_handler(call: CallbackQuery):
+        shutdown_pc(43200)
+        await call.message.answer('⏱️ PC will shutdown in 12 hours!')
+        await close(call)
+
+    @dp.callback_query(F.data == 'shutdown_cancel')
+    async def shutdown_cancel_handler(call: CallbackQuery):
+        if cancel_shutdown():
+            await call.message.answer('🚫 Shutdown cancelled!')
+        else:
+            await call.message.answer('❌ No scheduled shutdown to cancel')
+        await close(call)
 
     @dp.callback_query(F.data == 'restart')
     async def restart_handler(call: CallbackQuery):
@@ -178,6 +295,23 @@ def register_handlers(dp, bot, telegram_id):
         await bot.edit_message_caption(caption=f'🛜 Wi-Fi: {"🟢" if wifi else "🔴"}\n📲 Bluetooth: {"🟢" if bt else "🔴"}',
                                        chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
 
+    @dp.callback_query(F.data == 'commands')
+    async def commands_handler(call: CallbackQuery):
+        kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Close", callback_data="close")]])
+        commands_text = (
+            "/run – open an app, website (www.example.com), folder, or file (C:\\Windows)\n\n"
+            "/get – get the file from the specified path (e.g., C:\\Windows\\notepad.exe), limit: 50MB\n\n"
+            "/window – will create a window with your text\n\n"
+            "/cancel_shutdown – cancel scheduled shutdown"
+        )
+        await bot.edit_message_caption(
+            caption=commands_text,
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=kb
+        )
+
     @dp.message(Command("start"))
     async def start_message(message: types.Message):
         if str(message.from_user.id) == telegram_id:
@@ -194,6 +328,56 @@ def register_handlers(dp, bot, telegram_id):
             await bot.send_photo(chat_id=message.chat.id, photo=screenshot, caption=msg,
                                  parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
             await bot.delete_message(chat_id=message.chat.id, message_id=infomsg.message_id)
+
+    @dp.message(Command("run"))
+    async def run_command(message: types.Message):
+        if str(message.from_user.id) != telegram_id:
+            return
+        args = message.text.split(maxsplit=1)
+        if len(args) < 2:
+            await message.reply("Incorrect command usage (not enough arguments)")
+            return
+        data = args[1].strip()
+        result = run(data)
+        await message.reply(result)
+
+    @dp.message(Command("get"))
+    async def get_command(message: types.Message):
+        if str(message.from_user.id) != telegram_id:
+            return
+        args = message.text.split(maxsplit=1)
+        if len(args) < 2:
+            await message.reply("Incorrect command usage (not enough arguments)")
+            return
+        file_path = args[1].strip()
+        file_obj, error = get_file(file_path)
+        if error:
+            await message.reply(error)
+            return
+        sending_msg = await message.reply("⏳ Sending the file...")
+        await message.reply_document(file_obj)
+        await sending_msg.delete()
+        
+    @dp.message(Command("window"))
+    async def handle_window_command(message: types.Message):
+        text = message.text.removeprefix("/window").strip()
+        
+        if not text:
+            await message.reply("Incorrect command usage (not enough arguments)")
+            return
+        
+        create_window(text)
+        await message.reply("Done 👌")
+
+    @dp.message(Command("cancel_shutdown"))
+    async def cancel_shutdown_command(message: types.Message):
+        if str(message.from_user.id) != telegram_id:
+            return
+        
+        if cancel_shutdown():
+            await message.reply("🚫 Shutdown cancelled!")
+        else:
+            await message.reply("❌ No scheduled shutdown to cancel")
 
 async def run_bot():
     global bot, dp

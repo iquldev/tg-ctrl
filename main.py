@@ -4,7 +4,12 @@ from PyQt6.QtGui import QRegularExpressionValidator, QAction
 from PyQt6.QtCore import QRegularExpression
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 
-import requests, json, os, asyncio, threading
+import importlib
+import asyncio
+import json
+import os
+import threading
+import requests
 
 import bot as bot_module
 
